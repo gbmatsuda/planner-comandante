@@ -193,6 +193,15 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 @media(max-width:380px){.tlsb{width:120px;}.sbtxt{font-size:9px;}}
+
+/* ── MINITAREFAS / SPLIT ── */
+.tbadge-split{font-size:.7rem;color:var(--tm);margin-left:.4rem;}
+#splitModal .split-steps{max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:.35rem;}
+#splitModal .split-step{display:flex;align-items:center;gap:.4rem;}
+#splitModal .sinp{flex:1;background:var(--s2);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tp);font-family:'Space Grotesk',sans-serif;font-size:.87rem;padding:.35rem .6rem;outline:none;}
+#splitModal .smin{width:3.2rem;background:var(--s2);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tp);font-family:'Space Mono',monospace;font-size:.87rem;padding:.35rem .4rem;text-align:center;outline:none;}
+#splitModal .sord{font-size:.75rem;color:var(--tm);min-width:1.2rem;text-align:right;flex-shrink:0;}
+.split-loading{text-align:center;padding:2rem;color:var(--tm);font-size:.85rem;}
 </style>
 </head>
 <body>
@@ -390,6 +399,21 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
   </div>
 </div>
 
+<!-- SPLIT TASK MODAL -->
+<div class="ov" id="splitModal">
+  <div class="modal">
+    <div class="mtit">⚡ Minitarefas</div>
+    <div id="splitParentTxt" style="font-size:.8rem;color:var(--tm);margin-bottom:.2rem;line-height:1.4"></div>
+    <div id="splitStepsList" class="split-steps">
+      <div class="split-loading">Consultando IA…</div>
+    </div>
+    <div class="macts" id="splitActs" style="display:none;margin-top:.25rem">
+      <button class="mbtn mbtn-confirm" onclick="confirmSplit()">Criar minitarefas</button>
+      <button class="mbtn mbtn-cancel" onclick="closeOv('splitModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- COPY MODAL -->
 <div class="ov" id="copyModal">
   <div class="modal">
@@ -439,6 +463,7 @@ let curCtx='terra', curFilter='all', curDate=todayKey();
 let pendingSug=null, pendingRecur='once', pendingSugCtx='terra';
 let editAncId=null, editAncCtx='terra';
 let editTId=null, editTCtx='terra';
+let splitParentId=null, pendingSplitSteps=[];
 let dragId=null, dragSrc=null, resizing=null;
 let driveToken=null, driveFileId=null;
 let saveTimer=null;
@@ -703,20 +728,35 @@ function confirmTask(blockKey){
 // ═══════════════════════════════════════════════════════
 // TASK LIST
 // ═══════════════════════════════════════════════════════
+function sortWithMinis(items){
+  const result=[],minis={};
+  const parents=items.filter(t=>!t.parentId);
+  items.filter(t=>t.parentId).forEach(t=>{(minis[t.parentId]=minis[t.parentId]||[]).push(t);});
+  Object.values(minis).forEach(arr=>arr.sort((a,b)=>(a.stepOrder||0)-(b.stepOrder||0)));
+  parents.forEach(p=>{result.push(p);if(minis[p.id])result.push(...minis[p.id]);});
+  items.filter(t=>t.parentId&&!parents.find(p=>p.id===t.parentId)).forEach(t=>result.push(t));
+  return result;
+}
 function renderTaskList(){
   const list=document.getElementById('tasklist');
   let items=getTasks(curDate);
   if(curFilter!=='all')items=items.filter(t=>t.block===curFilter);
   if(!items.length){list.innerHTML='<div class="empty">Nenhuma tarefa.<br>Adicione acima ↑</div>';return;}
+  items=sortWithMinis(items);
   list.innerHTML=items.map(t=>{
     const b=BLK[t.block];
     const pl=getPlaced(curDate)[t.id];
     const stag=pl?`<span class="tsched">📍${p2(Math.floor(pl.startH))}:${p2(Math.round((pl.startH%1)*60))}</span>`:'';
     const rl=t.recur!=='once'?`<span class="trecur">↻${RLBL[t.recur]}</span>`:'';
-    return`<div class="titem${t.done?' done':''}" draggable="true" ondragstart="onDrag(event,'${t.id}','sidebar')">
+    const isMini=!!t.parentId;
+    const miniCount=!isMini?tasks.filter(x=>x.parentId===t.id&&taskApplies(x,curDate)).length:0;
+    const miniBadge=miniCount>0?`<span class="tbadge-split">⚡${miniCount}</span>`:'';
+    const splitBtn=!isMini?`<button class="tact" onclick="openSplit('${t.id}')" title="Dividir em minitarefas">⚡</button>`:'';
+    const miniStyle=isMini?` style="border-left:3px solid var(${b.c});margin-left:1.5rem;opacity:.93"`:'';
+    return`<div class="titem${t.done?' done':''}"${miniStyle} draggable="true" ondragstart="onDrag(event,'${t.id}','sidebar')">
       <div class="tchk${t.done?' on':''}" onclick="toggleDone('${t.id}')">${t.done?'✓':''}</div>
       <div class="tbody">
-        <div class="ttxt">${t.text}</div>
+        <div class="ttxt">${t.text}${miniBadge}</div>
         <div class="tmeta">
           <span class="tpill" style="background:var(${b.pc});border-color:var(${b.c});color:var(${b.tc})">${b.icon} ${b.label}</span>
           <span class="tctx">${CLBL[t.ctx||'terra']}</span>
@@ -725,6 +765,7 @@ function renderTaskList(){
         </div>
       </div>
       <div class="tacts">
+        ${splitBtn}
         <button class="tact" onclick="openEdit('${t.id}')">✎</button>
         <button class="tact" onclick="delTask('${t.id}')">✕</button>
       </div>
@@ -732,7 +773,13 @@ function renderTaskList(){
   }).join('');
 }
 function toggleDone(id){const t=tasks.find(t=>t.id===id);if(t){t.done=!t.done;scheduleSave();}renderTaskList();updateCtr();}
-function delTask(id){tasks=tasks.filter(t=>t.id!==id);Object.keys(placed).forEach(dk=>{delete placed[dk][id];});scheduleSave();refreshAll();}
+function delTask(id){
+  const hasChildren=tasks.some(x=>x.parentId===id);
+  if(hasChildren&&!confirm('Deletar também as minitarefas?'))return;
+  tasks=tasks.filter(t=>t.id!==id&&t.parentId!==id);
+  Object.keys(placed).forEach(dk=>{delete placed[dk][id];});
+  scheduleSave();refreshAll();
+}
 
 // ═══════════════════════════════════════════════════════
 // ANCHORS
@@ -802,6 +849,73 @@ function saveEdit(){
   t.durMin=parseInt(document.getElementById('edur').value)||60;
   t.ctx=editTCtx;t.recur=document.getElementById('erecur').value;
   closeOv('editModal');scheduleSave();refreshAll();
+}
+
+// ═══════════════════════════════════════════════════════
+// SPLIT TASK INTO MINI-TASKS
+// ═══════════════════════════════════════════════════════
+async function openSplit(id){
+  const t=tasks.find(t=>t.id===id);
+  if(!t)return;
+  splitParentId=id;pendingSplitSteps=[];
+  document.getElementById('splitParentTxt').textContent=`"${t.text}" · ${durFmt(t.durMin||60)}`;
+  document.getElementById('splitStepsList').innerHTML='<div class="split-loading">⚡ Quebrando em minitarefas…</div>';
+  document.getElementById('splitActs').style.display='none';
+  document.getElementById('splitModal').classList.add('on');
+  const prompt=`Divida esta tarefa em passos pequenos de no máximo 5 minutos cada.
+Contexto: Comandante de navio AHTS + dono da Escola Náutica Imperial Marinheiro MG, TDAH.
+Tarefa: "${t.text}"
+Duração total estimada: ${t.durMin||60} minutos
+Bloco: ${t.block}
+
+Regras:
+- Cada passo deve ser concreto e físico (ação clara e específica)
+- Máximo 5 minutos por passo
+- Mínimo 2, máximo 12 passos
+- Linguagem imperativa curta (ex: "Abrir planilha", "Ligar para X")
+
+Responda APENAS com JSON válido, sem markdown, sem explicação:
+[{"step":1,"text":"...","min":5},{"step":2,"text":"...","min":3}]`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:700,messages:[{role:'user',content:prompt}]})
+    });
+    const d=await r.json();
+    const raw=(d.content?.[0]?.text||'[]').replace(/```json|```/g,'').trim();
+    pendingSplitSteps=JSON.parse(raw);
+    renderSplitSteps(pendingSplitSteps);
+  }catch(e){
+    document.getElementById('splitStepsList').innerHTML='<div class="split-loading" style="color:var(--at)">Erro ao consultar IA. Tente novamente.</div>';
+  }
+}
+function renderSplitSteps(steps){
+  document.getElementById('splitStepsList').innerHTML=steps.map((s,i)=>
+    `<div class="split-step">
+      <span class="sord">${s.step}</span>
+      <input type="text" class="sinp" value="${s.text.replace(/"/g,'&quot;')}" oninput="pendingSplitSteps[${i}].text=this.value">
+      <input type="number" class="smin" value="${s.min}" min="1" max="5" oninput="pendingSplitSteps[${i}].min=+this.value">
+      <span style="font-size:.75rem;color:var(--tm)">min</span>
+    </div>`
+  ).join('');
+  document.getElementById('splitActs').style.display='';
+}
+function confirmSplit(){
+  const parent=tasks.find(t=>t.id===splitParentId);
+  if(!parent||!pendingSplitSteps.length)return;
+  tasks=tasks.filter(t=>t.parentId!==splitParentId);
+  const parentIdx=tasks.findIndex(t=>t.id===splitParentId);
+  const total=pendingSplitSteps.length;
+  const newTasks=pendingSplitSteps.map((s,i)=>({
+    id:tid(),text:`${s.step}/${total} · ${s.text}`,
+    block:parent.block,done:false,ctx:parent.ctx,recur:'once',
+    dateKey:parent.dateKey,durMin:Math.min(Math.max(1,s.min||5),5),
+    parentId:splitParentId,stepOrder:i+1
+  }));
+  tasks.splice(parentIdx+1,0,...newTasks);
+  closeOv('splitModal');scheduleSave();refreshAll();
+  showToast(`⚡ ${total} minitarefas criadas!`);
 }
 
 // ═══════════════════════════════════════════════════════
