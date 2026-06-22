@@ -212,9 +212,12 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
     <div class="drive-dot" id="driveDot"></div>
     <span id="driveStatusTxt">Não conectado</span>
   </div>
-  <button class="drive-btn signin" id="driveBtn" onclick="handleDriveAuth()">
-    Conectar Google Drive
-  </button>
+  <div style="display:flex;gap:5px">
+    <button class="drive-btn" onclick="openApiKeyModal()" title="Configurar API Key da IA">⚙️ IA</button>
+    <button class="drive-btn signin" id="driveBtn" onclick="handleDriveAuth()">
+      Conectar Google Drive
+    </button>
+  </div>
 </div>
 
 <!-- HEADER -->
@@ -433,6 +436,25 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
   </div>
 </div>
 
+<!-- API KEY MODAL -->
+<div class="ov" id="apiKeyModal">
+  <div class="modal">
+    <div class="mtit">⚙️ API Key — IA</div>
+    <div class="mf">
+      <div class="ml">Cole sua chave da Anthropic (salva só neste dispositivo)</div>
+      <input class="mi" type="password" id="apiKeyInp" placeholder="sk-ant-...">
+    </div>
+    <div style="font-size:.75rem;color:var(--tm);line-height:1.5">
+      Necessária para "Categorizar com IA" e "Minitarefas".<br>
+      Obtenha em <strong>console.anthropic.com</strong> → API Keys.
+    </div>
+    <div class="macts">
+      <button class="mbtn mbtn-confirm" onclick="saveApiKey()">Salvar</button>
+      <button class="mbtn mbtn-cancel" onclick="closeOv('apiKeyModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async></script>
 
@@ -454,6 +476,9 @@ const BLK = {
 };
 const RLBL={once:'1x',daily:'Todo dia',weekdays:'Seg–Sex',weekly:'Semanal'};
 const CLBL={terra:'🏠',bordo:'⚓',ambos:'🌐'};
+function getApiKey(){return localStorage.getItem('anthropic_key')||'';}
+function openApiKeyModal(){document.getElementById('apiKeyInp').value=getApiKey();document.getElementById('apiKeyModal').classList.add('on');}
+function saveApiKey(){const k=document.getElementById('apiKeyInp').value.trim();if(k)localStorage.setItem('anthropic_key',k);closeOv('apiKeyModal');showToast('✅ API Key salva!');}
 
 // ═══════════════════════════════════════════════════════
 // STATE
@@ -688,16 +713,24 @@ Contexto: Comandante de navio AHTS + dono da Escola Náutica Imperial Marinheiro
 Tarefa: "${text}"
 JSON apenas sem markdown: {"block":"foco"|"comm"|"learn"|"rest","reasoning":"max 10 palavras","durMin":número estimado em minutos}`;
   try{
+    const apiKey=getApiKey();
+    if(!apiKey)throw new Error('sem-key');
     const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,
+               'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:120,messages:[{role:'user',content:prompt}]})
     });
     const d=await r.json();
-    const raw=(d.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim();
+    if(!r.ok||!d.content)throw new Error('api-err');
+    const raw=(d.content[0]?.text||'{}').replace(/```json|```/g,'').trim();
     const p=JSON.parse(raw);
     pendingSug={text,block:p.block||'foco',reasoning:p.reasoning||'',durMin:p.durMin||60};
     document.getElementById('sugdur').value=pendingSug.durMin;
-  }catch{pendingSug={text,block:'foco',reasoning:'Escolha o bloco manualmente.',durMin:60};}
+  }catch(e){
+    const reason=e.message==='sem-key'?'Configure a API Key (⚙️ IA)':e.message==='api-err'?'Erro na API — verifique a key':'Erro de rede';
+    pendingSug={text,block:'foco',reasoning:reason,durMin:60};
+  }
   btn.disabled=false;sp.classList.remove('on');showSug();
 }
 function showSug(){
@@ -876,18 +909,28 @@ Regras:
 
 Responda APENAS com JSON válido, sem markdown, sem explicação:
 [{"step":1,"text":"...","min":5},{"step":2,"text":"...","min":3}]`;
+  const apiKey=getApiKey();
+  if(!apiKey){
+    document.getElementById('splitStepsList').innerHTML=
+      '<div class="split-loading" style="color:var(--at)">⚠️ API Key não configurada.<br>Clique em <strong>⚙️ IA</strong> no topo para configurar.</div>';
+    return;
+  }
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,
+               'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:700,messages:[{role:'user',content:prompt}]})
     });
     const d=await r.json();
-    const raw=(d.content?.[0]?.text||'[]').replace(/```json|```/g,'').trim();
+    if(!r.ok||!d.content)throw new Error(d.error?.message||'Erro na API — verifique a key.');
+    const raw=(d.content[0]?.text||'[]').replace(/```json|```/g,'').trim();
     pendingSplitSteps=JSON.parse(raw);
+    if(!pendingSplitSteps.length)throw new Error('IA não gerou passos. Tente novamente.');
     renderSplitSteps(pendingSplitSteps);
   }catch(e){
-    document.getElementById('splitStepsList').innerHTML='<div class="split-loading" style="color:var(--at)">Erro ao consultar IA. Tente novamente.</div>';
+    document.getElementById('splitStepsList').innerHTML=
+      `<div class="split-loading" style="color:var(--at)">⚠️ ${e.message}</div>`;
   }
 }
 function renderSplitSteps(steps){
@@ -1054,7 +1097,23 @@ function onDrag(e,id,src){dragId=id;dragSrc=src;e.dataTransfer.effectAllowed='mo
 function updateCtr(){const d=getTasks(curDate),done=d.filter(t=>t.done).length;document.getElementById('tctr').textContent=`${d.length-done} pendentes · ${done} feitas`;}
 function closeOv(id){document.getElementById(id).classList.remove('on');}
 document.querySelectorAll('.ov').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('on');});});
-function refreshAll(){renderDateHdr();renderWeek();renderAnchors();renderTaskList();updateCtr();if(document.getElementById('view-agenda').classList.contains('on'))renderTimeline();}
+
+function autoCarryForward(){
+  if(curDate!==todayKey())return;
+  const flagKey='acf_'+curDate;
+  if(localStorage.getItem(flagKey))return;
+  localStorage.setItem(flagKey,'1');
+  const prevDate=new Date(keyToDate(curDate));prevDate.setDate(prevDate.getDate()-1);
+  const from=fmtKey(prevDate);
+  const todayTexts=new Set(tasks.filter(t=>t.dateKey===curDate).map(t=>t.text));
+  const toCarry=tasks.filter(t=>t.dateKey===from&&t.recur==='once'&&!t.done&&!t.parentId&&!todayTexts.has(t.text));
+  if(!toCarry.length)return;
+  toCarry.forEach(t=>tasks.push({...t,id:tid(),dateKey:curDate,done:false}));
+  scheduleSave();
+  showToast(`📥 ${toCarry.length} pendente${toCarry.length>1?'s':''} importada${toCarry.length>1?'s':''} de ontem`);
+}
+
+function refreshAll(){renderDateHdr();renderWeek();renderAnchors();autoCarryForward();renderTaskList();updateCtr();if(document.getElementById('view-agenda').classList.contains('on'))renderTimeline();}
 
 // ── seed sample data ──
 function seed(){
