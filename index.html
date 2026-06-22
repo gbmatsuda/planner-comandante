@@ -405,11 +405,10 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
 <!-- SPLIT TASK MODAL -->
 <div class="ov" id="splitModal">
   <div class="modal">
-    <div class="mtit">⚡ Minitarefas</div>
+    <div class="mtit">⚡ Dividir em minitarefas</div>
     <div id="splitParentTxt" style="font-size:.8rem;color:var(--tm);margin-bottom:.2rem;line-height:1.4"></div>
-    <div id="splitStepsList" class="split-steps">
-      <div class="split-loading">Consultando IA…</div>
-    </div>
+    <div style="font-size:.75rem;color:var(--td);margin-bottom:.5rem">Edite os passos abaixo e ajuste o tempo de cada um:</div>
+    <div id="splitStepsList" class="split-steps"></div>
     <div class="macts" id="splitActs" style="display:none;margin-top:.25rem">
       <button class="mbtn mbtn-confirm" onclick="confirmSplit()">Criar minitarefas</button>
       <button class="mbtn mbtn-cancel" onclick="closeOv('splitModal')">Cancelar</button>
@@ -726,9 +725,8 @@ JSON apenas sem markdown: {"block":"foco"|"comm"|"learn"|"rest","reasoning":"max
     const p=JSON.parse(raw);
     pendingSug={text,block:p.block||'foco',reasoning:p.reasoning||'',durMin:p.durMin||60};
     document.getElementById('sugdur').value=pendingSug.durMin;
-  }catch(e){
-    const reason=e.message==='sem-key'?'Configure a API Key (⚙️ IA)':e.message==='api-err'?'Erro na API — verifique a key':'Erro de rede';
-    pendingSug={text,block:'foco',reasoning:reason,durMin:60};
+  }catch{
+    pendingSug={text,block:'foco',reasoning:'Escolha o bloco manualmente.',durMin:60};
   }
   btn.disabled=false;sp.classList.remove('on');showSug();
 }
@@ -886,50 +884,17 @@ function saveEdit(){
 // ═══════════════════════════════════════════════════════
 // SPLIT TASK INTO MINI-TASKS
 // ═══════════════════════════════════════════════════════
-async function openSplit(id){
+function openSplit(id){
   const t=tasks.find(t=>t.id===id);
   if(!t)return;
   splitParentId=id;pendingSplitSteps=[];
   document.getElementById('splitParentTxt').textContent=`"${t.text}" · ${durFmt(t.durMin||60)}`;
-  document.getElementById('splitStepsList').innerHTML='<div class="split-loading">⚡ Quebrando em minitarefas…</div>';
-  document.getElementById('splitActs').style.display='none';
   document.getElementById('splitModal').classList.add('on');
-  const prompt=`Divida esta tarefa em passos pequenos de no máximo 5 minutos cada.
-Contexto: Comandante de navio AHTS + dono da Escola Náutica Imperial Marinheiro MG, TDAH.
-Tarefa: "${t.text}"
-Duração total estimada: ${t.durMin||60} minutos
-Bloco: ${t.block}
-
-Regras:
-- Cada passo deve ser concreto e físico (ação clara e específica)
-- Máximo 5 minutos por passo
-- Mínimo 2, máximo 12 passos
-- Linguagem imperativa curta (ex: "Abrir planilha", "Ligar para X")
-
-Responda APENAS com JSON válido, sem markdown, sem explicação:
-[{"step":1,"text":"...","min":5},{"step":2,"text":"...","min":3}]`;
-  const apiKey=getApiKey();
-  if(!apiKey){
-    document.getElementById('splitStepsList').innerHTML=
-      '<div class="split-loading" style="color:var(--at)">⚠️ API Key não configurada.<br>Clique em <strong>⚙️ IA</strong> no topo para configurar.</div>';
-    return;
-  }
-  try{
-    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
-    });
-    const d=await r.json();
-    if(!r.ok||!d.candidates)throw new Error(d.error?.message||'Erro na API — verifique a key.');
-    const raw=(d.candidates[0]?.content?.parts[0]?.text||'[]').replace(/```json|```/g,'').trim();
-    pendingSplitSteps=JSON.parse(raw);
-    if(!pendingSplitSteps.length)throw new Error('IA não gerou passos. Tente novamente.');
-    renderSplitSteps(pendingSplitSteps);
-  }catch(e){
-    document.getElementById('splitStepsList').innerHTML=
-      `<div class="split-loading" style="color:var(--at)">⚠️ ${e.message}</div>`;
-  }
+  const durMin=t.durMin||60;
+  const n=Math.min(12,Math.max(2,Math.ceil(durMin/5)));
+  const minEach=Math.min(5,Math.floor(durMin/n));
+  pendingSplitSteps=Array.from({length:n},(_,i)=>({step:i+1,text:`Passo ${i+1}`,min:minEach}));
+  renderSplitSteps(pendingSplitSteps);
 }
 function renderSplitSteps(steps){
   document.getElementById('splitStepsList').innerHTML=steps.map((s,i)=>
