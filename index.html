@@ -87,9 +87,6 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
 .addftr{display:flex;gap:5px;margin-top:7px;align-items:center;flex-wrap:wrap;}
 .btnai{background:var(--s3);border:1px solid var(--b2);color:var(--tp);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:600;padding:6px 13px;border-radius:var(--rs);cursor:pointer;display:flex;align-items:center;gap:5px;}
 .btnai:disabled{opacity:.4;cursor:default;}
-.spin{width:12px;height:12px;border:2px solid var(--b2);border-top-color:var(--ft);border-radius:50%;animation:sp .8s linear infinite;display:none;}
-.spin.on{display:block;}
-@keyframes sp{to{transform:rotate(360deg);}}
 
 /* ── SUGGESTION ── */
 .sugbar{background:var(--s2);border:1px solid var(--b2);border-radius:var(--rs);padding:10px 11px;margin-bottom:9px;display:none;}
@@ -193,15 +190,6 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 @media(max-width:380px){.tlsb{width:120px;}.sbtxt{font-size:9px;}}
-
-/* ── MINITAREFAS / SPLIT ── */
-.tbadge-split{font-size:.7rem;color:var(--tm);margin-left:.4rem;}
-#splitModal .split-steps{max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:.35rem;}
-#splitModal .split-step{display:flex;align-items:center;gap:.4rem;}
-#splitModal .sinp{flex:1;background:var(--s2);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tp);font-family:'Space Grotesk',sans-serif;font-size:.87rem;padding:.35rem .6rem;outline:none;}
-#splitModal .smin{width:3.2rem;background:var(--s2);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tp);font-family:'Space Mono',monospace;font-size:.87rem;padding:.35rem .4rem;text-align:center;outline:none;}
-#splitModal .sord{font-size:.75rem;color:var(--tm);min-width:1.2rem;text-align:right;flex-shrink:0;}
-.split-loading{text-align:center;padding:2rem;color:var(--tm);font-size:.85rem;}
 </style>
 </head>
 <body>
@@ -212,12 +200,9 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
     <div class="drive-dot" id="driveDot"></div>
     <span id="driveStatusTxt">Não conectado</span>
   </div>
-  <div style="display:flex;gap:5px">
-    <button class="drive-btn" onclick="openApiKeyModal()" title="Configurar API Key da IA">⚙️ IA</button>
-    <button class="drive-btn signin" id="driveBtn" onclick="handleDriveAuth()">
-      Conectar Google Drive
-    </button>
-  </div>
+  <button class="drive-btn signin" id="driveBtn" onclick="handleDriveAuth()">
+    Conectar Google Drive
+  </button>
 </div>
 
 <!-- HEADER -->
@@ -225,9 +210,9 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
   <div class="hdr1">
     <div class="logo">⚓ Planner</div>
     <div class="ctx-grp">
-      <button class="cx on" onclick="setCtx('terra',this)">🏠 Terra</button>
+      <button class="cx" onclick="setCtx('terra',this)">🏠 Terra</button>
       <button class="cx" onclick="setCtx('bordo',this)">⚓ Bordo</button>
-      <button class="cx" onclick="setCtx('ambos',this)">🌐 Ambos</button>
+      <button class="cx on" onclick="setCtx('ambos',this)">🌐 Ambos</button>
     </div>
   </div>
   <div class="date-row">
@@ -253,9 +238,7 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
       <div class="addbox">
         <textarea class="addtxt" id="tinput" rows="2" placeholder="Descreva a tarefa normalmente…" onkeydown="handleKey(event)"></textarea>
         <div class="addftr">
-          <button class="btnai" id="aibtn" onclick="submitTask()">
-            <div class="spin" id="spin"></div>✨ Categorizar com IA
-          </button>
+          <button class="btnai" id="aibtn" onclick="submitTask()">✨ Categorizar</button>
         </div>
       </div>
 
@@ -323,7 +306,7 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
 
 <div class="btmbar">
   <div class="tctr" id="tctr">—</div>
-  <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--td)" id="ctxlbl">Terra</div>
+  <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--td)" id="ctxlbl">Ambos</div>
 </div>
 
 <!-- TOAST -->
@@ -402,20 +385,6 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
   </div>
 </div>
 
-<!-- SPLIT TASK MODAL -->
-<div class="ov" id="splitModal">
-  <div class="modal">
-    <div class="mtit">⚡ Dividir em minitarefas</div>
-    <div id="splitParentTxt" style="font-size:.8rem;color:var(--tm);margin-bottom:.2rem;line-height:1.4"></div>
-    <div style="font-size:.75rem;color:var(--td);margin-bottom:.5rem">Edite os passos abaixo e ajuste o tempo de cada um:</div>
-    <div id="splitStepsList" class="split-steps"></div>
-    <div class="macts" id="splitActs" style="display:none;margin-top:.25rem">
-      <button class="mbtn mbtn-confirm" onclick="confirmSplit()">Criar minitarefas</button>
-      <button class="mbtn mbtn-cancel" onclick="closeOv('splitModal')">Cancelar</button>
-    </div>
-  </div>
-</div>
-
 <!-- COPY MODAL -->
 <div class="ov" id="copyModal">
   <div class="modal">
@@ -431,25 +400,6 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--tp)
     <div class="macts">
       <button class="mbtn mbtn-confirm" onclick="executeCopy()">Copiar</button>
       <button class="mbtn mbtn-cancel" onclick="closeOv('copyModal')">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- API KEY MODAL -->
-<div class="ov" id="apiKeyModal">
-  <div class="modal">
-    <div class="mtit">⚙️ API Key — Google AI</div>
-    <div class="mf">
-      <div class="ml">Cole sua chave do Google AI Studio (salva só neste dispositivo)</div>
-      <input class="mi" type="password" id="apiKeyInp" placeholder="AIza...">
-    </div>
-    <div style="font-size:.75rem;color:var(--tm);line-height:1.5">
-      Gratuito, sem cartão de crédito.<br>
-      Obtenha em <strong>aistudio.google.com</strong> → Get API Key.
-    </div>
-    <div class="macts">
-      <button class="mbtn mbtn-confirm" onclick="saveApiKey()">Salvar</button>
-      <button class="mbtn mbtn-cancel" onclick="closeOv('apiKeyModal')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -475,19 +425,15 @@ const BLK = {
 };
 const RLBL={once:'1x',daily:'Todo dia',weekdays:'Seg–Sex',weekly:'Semanal'};
 const CLBL={terra:'🏠',bordo:'⚓',ambos:'🌐'};
-function getApiKey(){return localStorage.getItem('gemini_key')||'';}
-function openApiKeyModal(){document.getElementById('apiKeyInp').value=getApiKey();document.getElementById('apiKeyModal').classList.add('on');}
-function saveApiKey(){const k=document.getElementById('apiKeyInp').value.trim();if(k)localStorage.setItem('gemini_key',k);closeOv('apiKeyModal');showToast('✅ API Key salva!');}
 
 // ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
 let tasks=[], anchors=[], placed={};
-let curCtx='terra', curFilter='all', curDate=todayKey();
+let curCtx='ambos', curFilter='all', curDate=todayKey();
 let pendingSug=null, pendingRecur='once', pendingSugCtx='terra';
 let editAncId=null, editAncCtx='terra';
 let editTId=null, editTCtx='terra';
-let splitParentId=null, pendingSplitSteps=[];
 let dragId=null, dragSrc=null, resizing=null;
 let driveToken=null, driveFileId=null;
 let saveTimer=null;
@@ -695,40 +641,24 @@ function setFilter(f,btn){
 }
 
 // ═══════════════════════════════════════════════════════
-// AI CATEGORIZE
+// CATEGORIZE
 // ═══════════════════════════════════════════════════════
 function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submitTask();}}
-async function submitTask(){
+function submitTask(){
   const inp=document.getElementById('tinput'),text=inp.value.trim();if(!text)return;
-  const btn=document.getElementById('aibtn'),sp=document.getElementById('spin');
-  btn.disabled=true;sp.classList.add('on');
   document.getElementById('sugbar').classList.remove('on');
-  pendingRecur='once';pendingSugCtx='terra';
+  pendingRecur='once';pendingSugCtx='ambos';
   document.getElementById('sugdur').value=60;
-  ['terra','bordo','ambos'].forEach(c=>document.getElementById('scx-'+c)?.classList.toggle('on',c==='terra'));
+  ['terra','bordo','ambos'].forEach(c=>document.getElementById('scx-'+c)?.classList.toggle('on',c==='ambos'));
   document.querySelectorAll('.inline-row')[0].querySelectorAll('.chip').forEach((b,i)=>b.classList.toggle('on',i===0));
-  const prompt=`Classifique em: foco (trabalho criativo/técnico/concentração), comm (mensagens/reuniões/contatos), learn (estudo/cursos/leituras), rest (revisão/planejamento/descanso).
-Contexto: Comandante de navio AHTS + dono da Escola Náutica Imperial Marinheiro MG, TDAH.
-Tarefa: "${text}"
-JSON apenas sem markdown: {"block":"foco"|"comm"|"learn"|"rest","reasoning":"max 10 palavras","durMin":número estimado em minutos}`;
-  try{
-    const apiKey=getApiKey();
-    if(!apiKey)throw new Error('sem-key');
-    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
-    });
-    const d=await r.json();
-    if(!r.ok||!d.candidates)throw new Error('api-err');
-    const raw=(d.candidates[0]?.content?.parts[0]?.text||'{}').replace(/```json|```/g,'').trim();
-    const p=JSON.parse(raw);
-    pendingSug={text,block:p.block||'foco',reasoning:p.reasoning||'',durMin:p.durMin||60};
-    document.getElementById('sugdur').value=pendingSug.durMin;
-  }catch{
-    pendingSug={text,block:'foco',reasoning:'Escolha o bloco manualmente.',durMin:60};
-  }
-  btn.disabled=false;sp.classList.remove('on');showSug();
+  const low=text.toLowerCase();
+  let block='foco',reason='Trabalho focado';
+  if(/reuni|ligar|responder|email|e-mail|whats|zap|mensag|contato|telefo|falar com/.test(low)){block='comm';reason='Comunicação/contato';}
+  else if(/estud|ler|leitura|curso|aula|capítulo|simulado|prova|treina|aprend/.test(low)){block='learn';reason='Estudo/aprendizado';}
+  else if(/revis|planejar|organiz|fechar ciclo|pendênci|check|limpar|arrum/.test(low)){block='rest';reason='Revisão/planejamento';}
+  else{reason='Trabalho focado';}
+  pendingSug={text,block,reasoning:reason,durMin:60};
+  showSug();
 }
 function showSug(){
   const{text,block,reasoning}=pendingSug;
@@ -758,35 +688,20 @@ function confirmTask(blockKey){
 // ═══════════════════════════════════════════════════════
 // TASK LIST
 // ═══════════════════════════════════════════════════════
-function sortWithMinis(items){
-  const result=[],minis={};
-  const parents=items.filter(t=>!t.parentId);
-  items.filter(t=>t.parentId).forEach(t=>{(minis[t.parentId]=minis[t.parentId]||[]).push(t);});
-  Object.values(minis).forEach(arr=>arr.sort((a,b)=>(a.stepOrder||0)-(b.stepOrder||0)));
-  parents.forEach(p=>{result.push(p);if(minis[p.id])result.push(...minis[p.id]);});
-  items.filter(t=>t.parentId&&!parents.find(p=>p.id===t.parentId)).forEach(t=>result.push(t));
-  return result;
-}
 function renderTaskList(){
   const list=document.getElementById('tasklist');
   let items=getTasks(curDate);
   if(curFilter!=='all')items=items.filter(t=>t.block===curFilter);
   if(!items.length){list.innerHTML='<div class="empty">Nenhuma tarefa.<br>Adicione acima ↑</div>';return;}
-  items=sortWithMinis(items);
   list.innerHTML=items.map(t=>{
     const b=BLK[t.block];
     const pl=getPlaced(curDate)[t.id];
     const stag=pl?`<span class="tsched">📍${p2(Math.floor(pl.startH))}:${p2(Math.round((pl.startH%1)*60))}</span>`:'';
     const rl=t.recur!=='once'?`<span class="trecur">↻${RLBL[t.recur]}</span>`:'';
-    const isMini=!!t.parentId;
-    const miniCount=!isMini?tasks.filter(x=>x.parentId===t.id&&taskApplies(x,curDate)).length:0;
-    const miniBadge=miniCount>0?`<span class="tbadge-split">⚡${miniCount}</span>`:'';
-    const splitBtn=!isMini?`<button class="tact" onclick="openSplit('${t.id}')" title="Dividir em minitarefas">⚡</button>`:'';
-    const miniStyle=isMini?` style="border-left:3px solid var(${b.c});margin-left:1.5rem;opacity:.93"`:'';
-    return`<div class="titem${t.done?' done':''}"${miniStyle} draggable="true" ondragstart="onDrag(event,'${t.id}','sidebar')">
+    return`<div class="titem${t.done?' done':''}" draggable="true" ondragstart="onDrag(event,'${t.id}','sidebar')">
       <div class="tchk${t.done?' on':''}" onclick="toggleDone('${t.id}')">${t.done?'✓':''}</div>
       <div class="tbody">
-        <div class="ttxt">${t.text}${miniBadge}</div>
+        <div class="ttxt">${t.text}</div>
         <div class="tmeta">
           <span class="tpill" style="background:var(${b.pc});border-color:var(${b.c});color:var(${b.tc})">${b.icon} ${b.label}</span>
           <span class="tctx">${CLBL[t.ctx||'terra']}</span>
@@ -795,7 +710,6 @@ function renderTaskList(){
         </div>
       </div>
       <div class="tacts">
-        ${splitBtn}
         <button class="tact" onclick="openEdit('${t.id}')">✎</button>
         <button class="tact" onclick="delTask('${t.id}')">✕</button>
       </div>
@@ -803,13 +717,7 @@ function renderTaskList(){
   }).join('');
 }
 function toggleDone(id){const t=tasks.find(t=>t.id===id);if(t){t.done=!t.done;scheduleSave();}renderTaskList();updateCtr();}
-function delTask(id){
-  const hasChildren=tasks.some(x=>x.parentId===id);
-  if(hasChildren&&!confirm('Deletar também as minitarefas?'))return;
-  tasks=tasks.filter(t=>t.id!==id&&t.parentId!==id);
-  Object.keys(placed).forEach(dk=>{delete placed[dk][id];});
-  scheduleSave();refreshAll();
-}
+function delTask(id){tasks=tasks.filter(t=>t.id!==id);Object.keys(placed).forEach(dk=>{delete placed[dk][id];});scheduleSave();refreshAll();}
 
 // ═══════════════════════════════════════════════════════
 // ANCHORS
@@ -881,48 +789,6 @@ function saveEdit(){
   closeOv('editModal');scheduleSave();refreshAll();
 }
 
-// ═══════════════════════════════════════════════════════
-// SPLIT TASK INTO MINI-TASKS
-// ═══════════════════════════════════════════════════════
-function openSplit(id){
-  const t=tasks.find(t=>t.id===id);
-  if(!t)return;
-  splitParentId=id;pendingSplitSteps=[];
-  document.getElementById('splitParentTxt').textContent=`"${t.text}" · ${durFmt(t.durMin||60)}`;
-  document.getElementById('splitModal').classList.add('on');
-  const durMin=t.durMin||60;
-  const n=Math.min(12,Math.max(2,Math.ceil(durMin/5)));
-  const minEach=Math.min(5,Math.floor(durMin/n));
-  pendingSplitSteps=Array.from({length:n},(_,i)=>({step:i+1,text:`Passo ${i+1}`,min:minEach}));
-  renderSplitSteps(pendingSplitSteps);
-}
-function renderSplitSteps(steps){
-  document.getElementById('splitStepsList').innerHTML=steps.map((s,i)=>
-    `<div class="split-step">
-      <span class="sord">${s.step}</span>
-      <input type="text" class="sinp" value="${s.text.replace(/"/g,'&quot;')}" oninput="pendingSplitSteps[${i}].text=this.value">
-      <input type="number" class="smin" value="${s.min}" min="1" max="5" oninput="pendingSplitSteps[${i}].min=+this.value">
-      <span style="font-size:.75rem;color:var(--tm)">min</span>
-    </div>`
-  ).join('');
-  document.getElementById('splitActs').style.display='';
-}
-function confirmSplit(){
-  const parent=tasks.find(t=>t.id===splitParentId);
-  if(!parent||!pendingSplitSteps.length)return;
-  tasks=tasks.filter(t=>t.parentId!==splitParentId);
-  const parentIdx=tasks.findIndex(t=>t.id===splitParentId);
-  const total=pendingSplitSteps.length;
-  const newTasks=pendingSplitSteps.map((s,i)=>({
-    id:tid(),text:`${s.step}/${total} · ${s.text}`,
-    block:parent.block,done:false,ctx:parent.ctx,recur:'once',
-    dateKey:parent.dateKey,durMin:Math.min(Math.max(1,s.min||5),5),
-    parentId:splitParentId,stepOrder:i+1
-  }));
-  tasks.splice(parentIdx+1,0,...newTasks);
-  closeOv('splitModal');scheduleSave();refreshAll();
-  showToast(`⚡ ${total} minitarefas criadas!`);
-}
 
 // ═══════════════════════════════════════════════════════
 // COPY DAY
@@ -1062,18 +928,17 @@ function closeOv(id){document.getElementById(id).classList.remove('on');}
 document.querySelectorAll('.ov').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('on');});});
 
 function autoCarryForward(){
-  if(curDate!==todayKey())return;
-  const flagKey='acf_'+curDate;
+  const today=todayKey();
+  if(curDate!==today)return;
+  const flagKey='acf_'+today;
   if(localStorage.getItem(flagKey))return;
   localStorage.setItem(flagKey,'1');
-  const prevDate=new Date(keyToDate(curDate));prevDate.setDate(prevDate.getDate()-1);
-  const from=fmtKey(prevDate);
-  const todayTexts=new Set(tasks.filter(t=>t.dateKey===curDate).map(t=>t.text));
-  const toCarry=tasks.filter(t=>t.dateKey===from&&t.recur==='once'&&!t.done&&!t.parentId&&!todayTexts.has(t.text));
+  const todayTexts=new Set(tasks.filter(t=>t.dateKey===today).map(t=>t.text));
+  const toCarry=tasks.filter(t=>t.dateKey<today&&t.recur==='once'&&!t.done&&!todayTexts.has(t.text));
   if(!toCarry.length)return;
-  toCarry.forEach(t=>tasks.push({...t,id:tid(),dateKey:curDate,done:false}));
+  toCarry.forEach(t=>tasks.push({...t,id:tid(),dateKey:today,done:false}));
   scheduleSave();
-  showToast(`📥 ${toCarry.length} pendente${toCarry.length>1?'s':''} importada${toCarry.length>1?'s':''} de ontem`);
+  showToast(`📥 ${toCarry.length} pendente${toCarry.length>1?'s':''} importada${toCarry.length>1?'s':''}`);
 }
 
 function refreshAll(){renderDateHdr();renderWeek();renderAnchors();autoCarryForward();renderTaskList();updateCtr();if(document.getElementById('view-agenda').classList.contains('on'))renderTimeline();}
